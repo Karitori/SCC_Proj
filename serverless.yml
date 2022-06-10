@@ -1,0 +1,44 @@
+service: scc-order
+
+custom: 
+  config: ${file(config/${opt:stage, 'dev'}.yml)}
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  region: us-east-1
+
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - 'sqs:ReceiveMessage'
+        - 'sqs:DeleteMessage'
+      Resource: ${self:custom.config.SQS_NEW_ORDER_ARN}
+
+  environment:
+    ENV: ${self:custom.config.ENV}
+
+functions:
+  processOrder:
+    handler: handler.processOrder
+    # Setup Lambda Trigger
+    events:
+      - sqs:
+          arn: ${self:custom.config.SQS_NEW_ORDER_ARN}
+          batchSize: 10
+
+
+service: lecture-9-api-gateway
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - http:
+          method: GET
+          path: hello
